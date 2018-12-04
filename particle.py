@@ -6,6 +6,17 @@ import numpy as np
 from kmeans import KMeans, calc_sse
 
 
+def quantization_error(centroids: np.ndarray, labels: np.ndarray, data: np.ndarray) -> float:
+    error = 0.0
+    for i, c in enumerate(centroids):
+        idx = np.where(labels == i)
+        dist = np.linalg.norm(data[idx] - c)
+        dist /= len(idx)
+        error += dist
+    error /= len(centroids)
+    return error
+
+
 class Particle:
     """[summary]
 
@@ -15,16 +26,18 @@ class Particle:
                  n_cluster: int,
                  data: np.ndarray,
                  use_kmeans: bool = False,
-                 w: float = 0.72,
-                 c1: float = 1.49,
-                 c2: float = 1.49):
-        self.centroids = np.random.choice(data, n_cluster)
+                 w: float = 0.9,
+                 c1: float = 0.5,
+                 c2: float = 0.3):
+        index = np.random.choice(list(range(len(data))), n_cluster)
+        self.centroids = data[index].copy()
         if use_kmeans:
-            kmeans = KMeans(n_cluster=n_cluster)
+            kmeans = KMeans(n_cluster=n_cluster, init_pp=False)
             kmeans.fit(data)
             self.centroids = kmeans.centroid.copy()
-        self.best_position = None
-        self.best_score = np.inf
+        self.best_position = self.centroids.copy()
+        self.best_score = quantization_error(self.centroids, self._predict(data), data)
+        self.best_sse = calc_sse(self.centroids, self._predict(data), data)
         self.velocity = np.zeros_like(self.centroids)
         self._w = w
         self._c1 = c1
@@ -53,7 +66,9 @@ class Particle:
 
     def _update_centroids(self, data: np.ndarray):
         self.centroids = self.centroids + self.velocity
-        new_score = calc_sse(self.centroids, self._predict(data), data)
+        new_score = quantization_error(self.centroids, self._predict(data), data)
+        sse = calc_sse(self.centroids, self._predict(data), data)
+        self.best_sse = min(sse, self.best_sse)
         if new_score < self.best_score:
             self.best_score = new_score
             self.best_position = self.centroids.copy()
@@ -82,3 +97,7 @@ class Particle:
         """
         cluster = np.argmin(distance, axis=1)
         return cluster
+
+
+if __name__ == "__main__":
+    pass
