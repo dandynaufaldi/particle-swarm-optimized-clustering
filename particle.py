@@ -9,8 +9,8 @@ from kmeans import KMeans, calc_sse
 def quantization_error(centroids: np.ndarray, labels: np.ndarray, data: np.ndarray) -> float:
     error = 0.0
     for i, c in enumerate(centroids):
-        idx = np.where(labels == i)
-        dist = np.linalg.norm(data[idx] - c)
+        idx = np.where(labels == i)[0]
+        dist = np.sum(np.linalg.norm(data[idx] - c, axis=1))
         dist /= len(idx)
         error += dist
     error /= len(centroids)
